@@ -1,0 +1,91 @@
+---
+title: "Customers over Certain Dollar Amount"
+output:
+  github_document:
+    html_preview: false
+---
+#### Clear Environment
+```{r}
+rm(list = ls())
+```
+
+#### Load Packages
+```{r}
+library(tidyverse)
+library(dplyr)
+library(writexl)
+library(readxl)
+library(stringr)
+library(ggplot2)
+library(dplyr)
+library(lubridate)
+```
+#### Load Dataset 
+```{r}
+pi <- read_xlsx("/Users/matt/Desktop/Puffin/Projects/_Puffin_Data/220526_Posted_Sales_Invoice.xlsx")
+head(pi)
+```
+#### Create new dataframe with filters
+```{r}
+df <- pi %>%
+  filter(`Document Date` > "2021-01-01") %>% 
+  filter(`Customer Name` != 'Shopify') %>% 
+  filter(`Customer Name` != 'Shopify Orders') %>% 
+  filter(Canceled == 0)
+```
+
+#### Group DataFrame by SO & Customer
+- total the amount per SO
+```{r}
+df_grouped <- df %>%
+  group_by(`Order No.`, `Customer Name`) %>%
+  summarise(Total_Amt = sum(Amount)) %>%
+  ungroup()
+```
+
+#### Find Customers with Avg Orders over $2k
+```{r}
+customers_avg_over_2k <- df_grouped %>% 
+  group_by(`Customer Name`) %>% 
+  summarise(Avg_Order = mean(Total_Amt),
+            Num_Orders = n()) %>% 
+  filter(Avg_Order >= 2000) %>% 
+  ungroup()
+  
+```
+
+#### Subset these customers from the original dataframe
+```{r}
+customers_2k <- subset(df, df$`Customer Name` %in% customers_avg_over_2k$`Customer Name`)
+```
+
+#### Determine Number of Orders Customers with $2k average have placed and compute the average per month
+```{r}
+customers_2k_count <- customers_2k %>% 
+  group_by(`External Document No.`, `Customer Name`) %>% 
+  summarise(c = n()) %>% 
+  ungroup()
+
+customers_2k_count_avg <- customers_2k_count %>% count(`Customer Name`) %>% 
+  mutate(average_per_month = n / 12) %>% 
+  arrange(desc(average_per_month))
+  
+```
+
+#### Find number of orders per month that these customers place
+```{r}
+pi_over_2k <- customers_2k %>% 
+  filter(Amount >= 2000, Canceled == 0)
+
+orders_over_2k_per_month <- pi_over_2k %>%
+  group_by(month = floor_date(`Posting Date`, "month")) %>%
+  summarise(num_orders = n())
+
+print(paste("2k Customers average orders per month = ", mean(orders_over_2k_per_month$num_orders)))
+```
+
+####Write to Excel File
+```{r}
+write_xlsx(customers_2k_count_avg, "Customers_Avg_Over_2k.xlsx")
+```
+
