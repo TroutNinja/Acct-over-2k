@@ -1,8 +1,10 @@
 ---
 title: "Customers over Certain Dollar Amount"
 output:
-  github_document:
-    html_preview: false
+  prettydoc::html_pretty:
+      theme: leonids
+      github_document:
+        html_preview: false
 ---
 #### Clear Environment
 ```{r}
@@ -84,7 +86,7 @@ orders_over_2k_per_month <- pi_over_2k %>%
 print(paste("2k Customers average orders per month = ", mean(orders_over_2k_per_month$num_orders)))
 ```
 
-####Write to Excel File
+#### Write to Excel File
 ```{r}
 write_xlsx(customers_2k_count_avg, "Customers_Avg_Over_2k.xlsx")
 ```
